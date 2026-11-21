@@ -9,8 +9,8 @@ Addy Osmani 在 claude.dev 部落格（2026-11-16）寫 Claude Code 團隊怎麼
 - 主控與撰稿：Claude Opus 5.5。
 - 查證：Opus 級 subagent 開啟原文與文中全部連結逐項核對；Codex 與 agy（Gemini 4 Argon）各自獨立查證。重要說法須兩方以上一致且有官方或第一手來源才寫成確定，只有原文自述者在文中標明。
 - 分析角度：參考 `ai-mentor-agents` 的分析框架，由 Opus 級 subagent 整理成備忘（`research/lens_ai-mentor-agents.md`），只當撰稿參考。
-- 審稿：Opus 級 subagent 分三段獨立審查（事實、編輯與可讀性、終審），最後由一個 Opus 模型依潤稿準則（`editor-in-chief` skill）修飾文字並標示重點。
-- 全文譯本：Opus 級模型做術語表、審校與合併，Sonnet 級模型逐段翻譯，未經人工校稿，見 [translation-zh.html](translation-zh.html)。
+- 審稿：Opus 級 subagent 分三段獨立審查（事實、編輯與可讀性、終審），最後由一個 Opus 模型依潤稿準則（`editor-in-chief` skill）修飾文字並標示重點。發布後再經總編輯整理：由 Claude Opus 5.5 依同一準則逐句對照原文，修正措辭、統一導讀與譯本的術語，未新增事實。
+- 全文譯本：Opus 級模型做術語表、審校與合併，Sonnet 級模型逐段翻譯，再經總編輯整理統一術語並修順數句，未經人工校稿，見 [translation-zh.html](translation-zh.html)。
 - 圖片：封面由 Codex 生圖（不含文字）；流程圖為程式繪製的 SVG；單元測試與 E2E 失敗訊息對照依原文配圖說明以 HTML 元件重畫，不是原圖。
 
 ## 檔案
@@ -48,4 +48,4 @@ python3 research/build.py --root . --kind translation
 
 ## 狀態
 
-僅本機完成：未發布、未初始化獨立 Git、未推送。
+已發布（2026-11-21）：https://lushinshang.github.io/cc_verification_osmani/

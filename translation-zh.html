@@ -163,16 +163,16 @@ footer{max-width:720px;margin:64px auto 0;padding-top:16px;border-top:1px solid 
 <p class="byline">原文：Addy Osmani，claude.dev，2026-11-16　譯本整理：2026-11-21</p>
 </header>
 <main id="main"><article>
-<aside class="note"><p>端對端測試、性質測試與差異測試如何讓 coding agent 以證據驗證自己的工作，以及 Claude Code 團隊如何讓自家的驗證器保持誠實。</p><p>原文：<a href="https://claude.dev/blog/how-the-claude-code-team-thinks-about-verification/" target="_blank" rel="noopener noreferrer">How the Claude Code team thinks about verification</a>，作者 Addy Osmani（Member of Technical Staff），發布日期 2026-11-16。</p><p><strong>本頁為非官方繁體中文翻譯</strong>，由 AI 模型翻譯（Sonnet 級模型逐段翻譯、Opus 級模型審校與合併），未經人工校稿。原文版權屬原作者 Addy Osmani 與 Anthropic，僅供閱讀與研究；若有出入，以原文為準。原文配圖依其圖說以網頁元件重畫，非原圖。</p><p>另見：<a href="index.html">深度導讀</a></p></aside>
+<aside class="note"><p>端對端測試、性質測試與差異測試如何讓 coding agent 以證據驗證自己的工作，以及 Claude Code 團隊如何讓自家的驗證器保持誠實。</p><p>原文：<a href="https://claude.dev/blog/how-the-claude-code-team-thinks-about-verification/" target="_blank" rel="noopener noreferrer">How the Claude Code team thinks about verification</a>，作者 Addy Osmani（Member of Technical Staff），發布日期 2026-11-16。</p><p><strong>本頁為非官方繁體中文翻譯</strong>，由 AI 模型翻譯（Sonnet 級模型逐段翻譯、Opus 級模型審校與合併，再經總編輯整理統一術語並修順數句），未經人工校稿。原文版權屬原作者 Addy Osmani 與 Anthropic，僅供閱讀與研究；若有出入，以原文為準。原文配圖依其圖說以網頁元件重畫，非原圖。</p><p>另見：<a href="index.html">深度導讀</a></p></aside>
 <p>在 Claude Code 團隊，絕大多數的程式碼（約 90%）由 Claude 撰寫，並<a href="https://claude.dev/blog/solving-code-review-at-anthropic/" target="_blank" rel="noopener noreferrer">經 Claude 審查</a>。在這樣的規模下，如何讓我們的 agent 具備以證據驗證自身工作的能力，就變得極為重要。</p>
 <p>驗證迴圈是讓你能把更多工作委派給 Claude 的基本構件。沒有驗證迴圈，你實際上只能同時跑一兩個 Claude，因為每件事都得自己檢查；有了驗證迴圈，你可以平行執行數十甚至數百個。</p>
-<p>這是因為給 agent <a href="https://claude.com/blog/building-verification-loops-in-claude-code-with-skills" target="_blank" rel="noopener noreferrer">一個驗證自身輸出的方法</a>，是提升品質的有效做法。在一項針對結構化檔案生成的內部測試中，讓一個獨立的評分器依據評分準則檢查 Claude 的工作，相較於標準的 prompting 迴圈，<a href="https://claude.com/blog/claude-managed-agents" target="_blank" rel="noopener noreferrer">任務成功率最多提升 10 個百分點</a>，而且在最難的題目上進步最多。</p>
+<p>這是因為給 agent <a href="https://claude.com/blog/building-verification-loops-in-claude-code-with-skills" target="_blank" rel="noopener noreferrer">一個驗證自身輸出的方法</a>，是提升品質的有效做法。在一項針對結構化檔案生成的內部測試中，讓一個獨立的評分器依據評分準則檢查 Claude 的工作，相較於標準提示迴圈，<a href="https://claude.com/blog/claude-managed-agents" target="_blank" rel="noopener noreferrer">任務成功率最多提升 10 個百分點</a>，而且在最難的題目上進步最多。</p>
 <p>過去驗證成本高昂的東西（測試、基準測試、規格、真實的端對端執行），如今向 agent 要求就很便宜。就像產生程式碼一樣，agent 也能快速產生測試、基準測試與規格。而且一旦產生，這些測試與基準測試就以軟體的形式執行，因此可以頻繁執行，不必多花太多 token。</p>
 <p>你也可以利用結果來改善 agent 在該任務上的表現，讓驗證迴圈閉合。例如，如果 agent 反覆在一項檢查日誌是否含有使用者資料的測試中失敗，你可以建立一個 hook，或在 CLAUDE.md 中加入更明確的規則，以避免日後再出問題。這（大致上）能防止同樣的問題再次發生。</p>
 <p>所以，如果驗證對於高速產出高品質的程式碼至關重要，那麼你該使用哪些類型的測試，又該如何在整個流程（pipeline）中運用它們？本文回答這些問題，也分享 Claude Code 團隊所採用的做法。</p>
 <h2 id="sec-1">測試並非生而平等：值得投資的 3 種測試</h2>
 <p>不論你選擇哪一種測試類型，都有幾種失效模式需要避免。</p>
-<p>如果你的測試不穩定（時好時壞），你會訓練 agent 把測試再跑一次，而不是去修正失敗的程式碼。如果你的測試很慢，agent 在各批次中會少跑一些測試，這可能讓問題難以定位。較重的測試最好安排在 commit 變更之前執行。</p>
+<p>如果你的測試不穩定（flaky，時好時壞），你會訓練 agent 把測試再跑一次，而不是去修正失敗的程式碼。如果你的測試很慢，agent 在各批次中會少跑一些測試，這可能讓問題難以定位。較重的測試最好安排在 commit 改動之前執行。</p>
 <p>接下來，是我認為最值得投資的三種測試類型。</p>
 <h3>E2E 測試</h3>
 <p>如果只能專注一種測試類型，就選端對端（E2E）測試。這類測試描述真實的使用者流程，例如把商品加入購物車、結帳，然後前往訂單確認頁面。</p>
@@ -180,27 +180,27 @@ footer{max-width:720px;margin:64px auto 0;padding-top:16px;border-top:1px solid 
 <figure class="testfail" aria-label="單元測試與端對端測試的失敗訊息對照"><div class="tf-grid"><section class="tf-panel tf-unit" aria-label="單元測試的失敗訊息"><p class="tf-kind">單元測試</p><div class="tf-term" role="img" aria-label="終端機輸出：FAIL checkout.test.ts，Error: Timeout after 30s"><span class="tf-bad">FAIL</span> checkout.test.ts
 Error: Timeout after 30s</div><p class="tf-verdict">只能盲目摸索：沒有步驟，也沒有追蹤紀錄。</p></section><section class="tf-panel tf-e2e" aria-label="端對端測試的失敗訊息"><p class="tf-kind">端對端（E2E）測試</p><div class="tf-term"><span class="tf-file">checkout.spec.ts</span><ol class="tf-steps"><li class="ok"><span class="tf-st">通過</span>Register</li><li class="ok"><span class="tf-st">通過</span>Add item to cart</li><li class="ng"><span class="tf-st">失敗</span>Checkout</li><li class="na"><span class="tf-st">未到達</span>See confirmation page</li></ol></div><div class="tf-shot" role="img" aria-label="失敗當下的頁面截圖示意：結帳頁顯示付款表單載入失敗，下單按鈕呈停用狀態"><div class="tf-url">shop.example/checkout</div><div class="tf-page"><p class="tf-err">Payment form failed to load</p><span class="tf-btn" aria-disabled="true">Place order</span></div></div><p class="tf-what"><strong>哪一步失敗：</strong>Checkout。「Place order」按鈕一直是停用狀態，因為付款表單始終沒有載入。</p><p class="tf-verdict">有截圖、追蹤紀錄，以及哪一步失敗的描述。</p></section></div><figcaption>原文圖說：單元測試可能只顯示「Error: Timeout after 30 seconds」，端對端測試卻能附上螢幕截圖，並描述哪裡壞了。（依原文配圖的說明以網頁元件重畫，不是原圖；終端機與頁面文字保留英文。）</figcaption></figure>
 <p>雖然單元測試比較快，也比較不會時好時壞，但仍有可能通過單元測試卻弄壞功能。這是因為 agent 與測試兩者都不了解完整的任務。</p>
-<p>有了 E2E 測試，就能有效地讓你的 agent 對真實運行中的系統擁有手與眼。你可以用一個 skill 搭配 <a href="https://chromedevtools.github.io/devtools-protocol/" target="_blank" rel="noopener noreferrer">CDP</a>、模擬器或 API harness 等工具，來啟動、操作並檢查應用程式。</p>
+<p>做 E2E 測試時，讓你的 agent 對真正執行中的系統有手有眼，效果很好。你可以用一個 skill 搭配 <a href="https://chromedevtools.github.io/devtools-protocol/" target="_blank" rel="noopener noreferrer">CDP</a>、模擬器或 API harness 等工具，來啟動、操作並檢查應用程式。</p>
 <p>功能地圖可以作為 agent 的指引與評分準則，因為功能地圖通常從使用者的角度列出功能，並描述路徑、鍵盤快速鍵、選擇器與預期結果。</p>
 <h3>性質測試：不能被打破的約束</h3>
 <p>許多測試是根據你認為可能出錯的地方而寫的。性質測試則著眼於人們容易忽略的邊界情況，而那正是 agent 經常出錯之處。</p>
-<p>你先寫下一個你認為不可能失敗的敘述，然後使用測試函式庫（JS/TS 用 <a href="https://fast-check.dev/" target="_blank" rel="noopener noreferrer">fast-check</a>、Python 用 <a href="https://hypothesis.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">Hypothesis</a>、Rust 用 <a href="https://proptest-rs.github.io/proptest/" target="_blank" rel="noopener noreferrer">proptest</a> 等）產生數千筆輸入，試圖證明這個敘述不成立。</p>
+<p>你先寫下一句你認為不可能失敗的陳述，然後使用測試函式庫（JS/TS 用 <a href="https://fast-check.dev/" target="_blank" rel="noopener noreferrer">fast-check</a>、Python 用 <a href="https://hypothesis.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">Hypothesis</a>、Rust 用 <a href="https://proptest-rs.github.io/proptest/" target="_blank" rel="noopener noreferrer">proptest</a> 等）產生數千筆輸入，試圖證明這個陳述不成立。</p>
 <p>幾乎每個軟體專案都有許多性質，例如：</p>
-<ul><li><strong>來回編碼（round-trip）</strong>：「如果你把 X 編碼後再解碼回來，會得到 X。」這同樣適用於解析與序列化。</li><li><strong>不變量</strong>：必須永遠成立的事，例如「帳戶餘額永遠不可能變成負數」。</li><li><strong>冪等性</strong>：執行一個動作（遷移、正規化、重試）兩次，與執行一次的效果相同。</li><li><strong>等價性</strong>：最佳化後的程式碼，產生與樸素但正確的程式碼相同的結果。</li></ul>
-<p>性質測試函式庫是讓 agent 保持誠實的好方法，因為它使用的邊界情況，並非由撰寫原始程式碼的 agent 以相同的偏誤所建立。當規格已與正式環境行為脫節、不再是可靠的驗證依據時，它們對於改寫也特別有幫助。</p>
+<ul><li><strong>來回編碼（round-trip）</strong>：「如果你把 X 編碼後再解碼回來，會得到 X。」這同樣適用於解析與序列化。</li><li><strong>不變量</strong>：必須永遠成立的事，例如「帳戶餘額永遠不可能變成負數」。</li><li><strong>冪等性</strong>：執行一個動作（遷移、正規化、重試）兩次，與執行一次的效果相同。</li><li><strong>等價性</strong>：最佳化後的程式碼，產生與簡單直接但正確的程式碼相同的結果。</li></ul>
+<p>性質測試函式庫是讓 agent 保持誠實的好方法，因為它用的邊界情況，不是由撰寫原始程式碼的那個 agent 帶著同樣的偏誤想出來的。當規格已與正式環境行為脫節、不再是可靠的驗證依據時，它們對於改寫也特別有幫助。</p>
 <h3>差異測試：舊系統就是判準</h3>
 <p>差異測試對於功能預期維持不變的<a href="https://claude.com/resources/articles/ai-code-migration" target="_blank" rel="noopener noreferrer">大規模遷移</a>情境特別有效。進行這類測試時，你以相同的輸入同時執行舊系統與新系統，看看結果是否不同。如果不同，就表示有 bug 或破壞性變更需要修正。</p>
-<p>差異測試的關鍵，是使用隨機產生的輸入，或是正式環境流量的樣本。你也會想把空白字元這類無關的因素正規化，並維護一份已核准變更的清單，用於新環境理應與舊環境不同的情況。</p>
+<p>差異測試的關鍵，是使用隨機產生的輸入，或是正式環境流量的樣本。你也會想把空白字元這類無關的因素正規化，並維護一份已核准改動的清單，用於新環境理應與舊環境不同的情況。</p>
 <h2 id="sec-2">Claude Code 團隊怎麼看待驗證</h2>
 <p>我們先前寫過 <a href="https://claude.dev/blog/solving-code-review-at-anthropic/" target="_blank" rel="noopener noreferrer">Anthropic 如何進行程式碼審查</a>，這篇文章則想更深入談我們如何驗證自己的工作。</p>
-<h3>驗證就是把變更跑起來</h3>
-<p>端對端地執行整個應用程式，比測試更重要。你不會在沒有用模擬器試過的情況下就發布 iOS 的變更，Claude 也是一樣。</p>
-<p>Claude 可以像人類或 QA 工程師那樣測試整個應用程式。網頁變更可以請它使用 Claude Chrome 擴充功能，行動裝置用 iOS 或 Android 的 MCP，桌面應用程式用 computer use，後端工作則請它在本機執行服務。</p>
-<p>若要把啟動模擬器或執行應用程式的方式寫成固定做法，可以建立一個名為 verify 的 skill。把它放在 repo 裡的 <code>.claude/skills/</code> 資料夾中，盡可能靠近相關的程式碼，需要幾個就加幾個。Claude 知道在 commit 變更之前要使用 verify skill。</p>
+<h3>驗證就是把改動跑起來</h3>
+<p>端對端地執行整個應用程式，比測試更重要。你不會在沒有用模擬器試過的情況下就發布 iOS 的改動，Claude 也是一樣。</p>
+<p>Claude 可以像人類或 QA 工程師那樣測試整個應用程式。網頁改動可以請它使用 Claude Chrome 擴充功能，行動裝置用 iOS 或 Android 的 MCP，桌面應用程式用 computer use，後端工作則請它在本機執行服務。</p>
+<p>若要把啟動模擬器或執行應用程式的方式寫成固定做法，可以建立一個名為 verify 的 skill。把它放在 repo 裡的 <code>.claude/skills/</code> 資料夾中，盡可能靠近相關的程式碼，需要幾個就加幾個。Claude 知道在 commit 改動之前要使用 verify skill。</p>
 <p>接著，投入心力讓你的 verify skill 又快又可靠。請 Claude 反覆改進它並對它做壓力測試。它是你的冒煙測試 harness，所以你要它穩如磐石。</p>
-<p>當你給 Claude 一個能對自己的變更做端對端冒煙測試的方式，得到的結果會好上許多。你會看到它像人類一樣，更快地迭代並抓出真正的錯誤。在 Anthropic，我們幾乎所有變更都是這樣測試的。</p>
+<p>當你給 Claude 一個能對自己的改動做端對端冒煙測試的方式，得到的結果會好上許多。你會看到它像人類一樣，更快地迭代並抓出真正的錯誤。在 Anthropic，我們幾乎所有改動都是這樣測試的。</p>
 <h3>失敗的測試需要人來關注</h3>
-<p>沒有人能讀完每一項變更，所以我們把失敗當作判斷哪些地方需要人介入的方式之一。Claude 會執行檢查，並嘗試修復任何失敗的項目。如果一項檢查在三輪之後仍然失敗，Claude 就會停下來，找人類來處理。</p>
+<p>沒有人能讀完每一項改動，所以我們把失敗當作判斷哪些地方需要人介入的方式之一。Claude 會執行檢查，並嘗試修復任何失敗的項目。如果一項檢查在三輪之後仍然失敗，Claude 就會停下來，找人類來處理。</p>
 <h3>Code owner 自己撰寫檢查</h3>
 <p>擁有該程式碼的人負責撰寫對應的檢查，並不斷調整，直到檢查標出的項目就是 owner 本人會標出的項目。當某項檢查找來審查者時，它應該說明原因，這樣審查者就不必自己從 diff 裡推敲。</p>
 <h3>可靠性檢查依 diff 觸發</h3>
@@ -209,33 +209,33 @@ Error: Timeout after 30s</div><p class="tf-verdict">只能盲目摸索：沒有�
 <h3>一位審查者，多個輪次</h3>
 <p>我們不靠疊加更多審查者來改善審查。在主要審查者之上再加第二位更昂貴的審查者，往往是比調校主要審查者更差的做法。我們的做法是準備一份 <a href="https://code.claude.com/docs/en/code-review-customize" target="_blank" rel="noopener noreferrer">REVIEW.md</a>，說明審查者針對這段程式碼應該留意什麼。</p>
 <p>我們也認為，審查與驗證的各輪次應該彼此累積。我們讓每一輪都參照先前輪次與過去失敗的脈絡，而不是從頭重新檢查所有東西。這樣比較省，也能找到更多問題。</p>
-<h3>變更不能修改自己的檢查</h3>
-<p>如果一項變更能修改用來評判它的檢查，那麼這項檢查就已經失效。Code Review 會從基底分支或預設分支讀取 REVIEW.md 檔案，<a href="https://code.claude.com/docs/en/code-review-customize" target="_blank" rel="noopener noreferrer">絕不從 PR 的變更讀取</a>。Claude Code 團隊確保把關變更的規則放在變更無法修改的分支上。</p>
-<p>Claude Code 團隊也讓審查只針對 commit 進行。如果審查進行的同時有人在 push，審查結果就不再有用。對一個過時 commit 的通過審查，毫無意義。</p>
-<p>團隊也會先跑低成本的檢查。如果 agent 在本機測試之前就 push，它耗掉的是共用的審查與 CI 時間，而這個 bug 本來可以自己抓出來。在我們的團隊裡，Claude 會在開啟 PR 之前先跑測試、建置與 linter。你可以用一個在 Claude 結束時執行測試的 <a href="https://code.claude.com/docs/en/hooks" target="_blank" rel="noopener noreferrer">hook</a>，或是以測試套件通過為目標的 <a href="https://code.claude.com/docs/en/goal" target="_blank" rel="noopener noreferrer">/goal</a> 來強制執行這點。</p>
+<h3>改動不能修改自己的檢查</h3>
+<p>如果一項改動能修改用來評判它的檢查，那麼這項檢查就已經失效。Code Review 會從基底分支或預設分支讀取 REVIEW.md 檔案，<a href="https://code.claude.com/docs/en/code-review-customize" target="_blank" rel="noopener noreferrer">絕不從 PR 的改動讀取</a>。Claude Code 團隊確保把關改動的規則放在改動無法修改的分支上。</p>
+<p>Claude Code 團隊也讓審查只針對 commit 進行。如果審查進行的同時有人在 push，審查結果就不再有用。在過時 commit 上通過審查，毫無意義。</p>
+<p>團隊也會先跑低成本的檢查。如果 agent 在本機測試之前就 push，它耗掉的是共用的審查與 CI 時間，而這個 bug 它本來可以自己抓出來。在我們的團隊裡，Claude 會在開啟 PR 之前先跑測試、建置與 linter。你可以用一個在 Claude 結束時執行測試的 <a href="https://code.claude.com/docs/en/hooks" target="_blank" rel="noopener noreferrer">hook</a>，或是以測試套件通過為目標的 <a href="https://code.claude.com/docs/en/goal" target="_blank" rel="noopener noreferrer">/goal</a> 來強制執行這點。</p>
 <h3>新的閘門先從觀察模式開始</h3>
 <p>在我們自己的 repo 裡，我們會為每個 commit 打上標記，記錄它是如何被驗證的。這個標記甚至包含「none」，這樣我們就能查詢哪些 commit 沒有經過驗證。</p>
-<p>我們也建立了一個 commit 閘門，如果 session 中沒有 /code-review 或 /verify，就可以擋下該 commit。我們把它設定成關閉、觀察與強制三種模式。</p>
+<p>我們也建立了一個 commit 閘門，如果 session 中沒有跑過 /code-review 或 /verify，就可以擋下該 commit。我們把它設定成關閉、觀察與強制三種模式。</p>
 <p>觀察模式會記錄哪些 commit 原本會被擋下，讓我們可以檢視其中的誤報，確保沒有人受到影響。</p>
 <p>強制模式則會擋下 commit。任何 commit 都可以在訊息中附上說明，解釋為什麼沒有經過驗證。如果一個 session 中 commit 已被擋下兩次，下一次就會放行，這樣 Claude 才不會卡住，畢竟 Claude Code 並不完美。</p>
 <h3>用真正重要的東西來測試你的檢查</h3>
-<p>Claude Code 團隊也會定期審查那些審查者。我們追蹤已合併的變更中有多少被 revert、有多少變更在合併前被維護者拒絕，以及一組規模相當、始終保持乾淨的變更子集。</p>
-<p>這也可以透過正式的評估來進行。在我們的<a href="https://claude.dev/blog/solving-code-review-at-anthropic/" target="_blank" rel="noopener noreferrer">程式碼審查文章</a>中，我們描述了 Code Review 團隊如何根據過去的事故與 revert 建立評估。針對每個範例，他們會把 repo 重建成審查當時的狀態，並提供一句話的標準答案，說明 bug 是什麼。只有正確描述該 bug 的發現項目才得分。他們以已合併且穩定的變更作為對照組，以防止過度標記。他們的調校集與用來評估系統的固定測試集是分開的。</p>
-<p>他們也分別評估原始發現項目、驗證之後以及最終審查的召回率。這讓他們能看出系統是否把原本已經找到的 bug 弄丟了。任何把這些全部當成單一端對端分數的評估，都無法捕捉到這種細微差異。</p>
-<p>除了正確性之外，我們在意的另一個面向是這項修改有多必要。好的審查者會抓到大部分技術上正確的問題，但人們關心的是某個 bug 屬於必須修、應該修，還是 nit（細節小問題）。</p>
+<p>Claude Code 團隊也會定期審查那些審查者。我們追蹤已合併的改動中有多少被 revert、有多少改動在合併前被維護者拒絕，以及一組規模相當、始終保持乾淨的改動子集。</p>
+<p>這也可以透過正式的評測來進行。在我們的<a href="https://claude.dev/blog/solving-code-review-at-anthropic/" target="_blank" rel="noopener noreferrer">程式碼審查文章</a>中，我們描述了 Code Review 團隊如何根據過去的事故與 revert 建立評測。針對每個範例，他們會把 repo 重建成審查當時的狀態，並提供一句話的標準答案，說明 bug 是什麼。只有正確描述該 bug 的發現項目才得分。他們以已合併且穩定的改動作為對照組，以防止過度標記。他們的調校集與用來評估系統的固定測試集是分開的。</p>
+<p>他們也分別評估原始發現項目、驗證之後以及最終審查的召回率。這讓他們能看出系統是否把原本已經找到的 bug 弄丟了。任何把這些全部當成單一端對端分數的評測，都無法捕捉到這種細微差異。</p>
+<p>除了正確性之外，我們在意的另一個面向是這項修改有多必要。好的審查者會抓到大部分技術上成立的問題，但人們關心的是某個 bug 屬於必須修、應該修，還是 nit（細節小問題）。</p>
 <p>Code Review 正是採用這個概念，它會把項目標成 <a href="https://code.claude.com/docs/en/code-review-pull-requests" target="_blank" rel="noopener noreferrer">Important、Nit 或 Pre-existing</a>。「Pre-existing」標籤的意思是，審查者不該讓作者為原本就存在的 bug 負責。</p>
-<p>最後，Claude Code 團隊會把召回率調高到這個程度：再往前一步的改進，就會變成過度擬合評估，而不是真的抓到 bug。</p>
+<p>最後，Claude Code 團隊會把召回率調高到這個程度：再往前一步的改進，就會變成過度擬合評測，而不是真的抓到 bug。</p>
 <h3>把漏掉的案例變成規則</h3>
 <p>在 Claude Code 的 repo 裡，我們有兩種把漏掉的案例變成規則的方法。第一種是從人工程式碼審查的留言與 PR 的 revert 中提取模式，找出常見的問題。這些模式必須至少出現在兩個 PR 中，且能從 diff 辨識出來，才會被視為潛在的規則。三個 agent 會嘗試反駁它們，然後由人類在 PR 中審查並核准。</p>
 <p>第二種方法是針對一個與已知事故相關的 PR，重播三個 bug 偵測器。如果至少兩個找到該 bug，它就是可偵測的 bug。如果這個 bug 在小幅 diff 上被漏掉，這就是一個值得變成 REVIEW.md 中規則的缺口。</p>
 <p>不穩定的測試也比照處理。Claude 不能跳過它們、加入 sleep 等待，或是重試到通過為止。如果找不到根本原因，它就刪除該測試，並寫下原因。</p>
 <p>規則也需要整理。測試套件、驗證步驟與 .md 檔案放著不管就只會越長越多，所以我們定期整理它們。</p>
 <h2 id="sec-3">好的測試，好的結果</h2>
-<p>我們發現，給你的 agent 一個帶有強力回饋迴圈、能驗證自己工作的方式，會帶來決定性的差別。對待你的驗證層，要像對待任何其他系統一樣。讓這些檢查所評判的變更碰不到它們；依對你而言重要的 bug 來為這些檢查評分；在它們漏掉東西時寫下教訓，讓同樣的事不會發生第二次；並修剪這些教訓，讓它們始終值得執行。</p>
+<p>我們發現，給你的 agent 一個帶有強力回饋迴圈、能驗證自己工作的方式，會帶來決定性的差別。對待你的驗證層，要像對待任何其他系統一樣。讓這些檢查所評判的改動碰不到它們；依對你而言重要的 bug 來為這些檢查評分；在它們漏掉東西時寫下教訓，讓同樣的事不會發生第二次；並修剪這些教訓，讓它們始終值得執行。</p>
 <p>做到這些，你的工作就會從閱讀每一份 diff，轉為定義「完成」的樣子並檢視證據，這正是讓你能同時執行多個 Claude 的原因。</p>
 </article></main>
 <footer>
-<p>本頁為非官方翻譯，由 AI 模型翻譯與審校（Sonnet 級模型逐段翻譯、Opus 級模型審校與合併），未經人工校稿；原文版權屬原作者與 Anthropic，僅供閱讀與研究，若有出入以原文為準。另見：<a href="index.html">深度導讀</a>。</p>
+<p>本頁為非官方翻譯，由 AI 模型翻譯與審校（Sonnet 級模型逐段翻譯、Opus 級模型審校與合併，再經總編輯整理統一術語並修順數句），未經人工校稿；原文版權屬原作者與 Anthropic，僅供閱讀與研究，若有出入以原文為準。另見：<a href="index.html">深度導讀</a>。</p>
 </footer>
 </div>
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="圖片放大檢視"><button type="button" aria-label="關閉放大檢視">關閉（Esc）</button><img src="" alt=""></div>
